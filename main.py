@@ -3,13 +3,22 @@ import random
 import sqlite3
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedia, InputFile
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedia, InputFile, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
 TOKEN_API = 'TOKEN'
 
 bot = Bot(TOKEN_API)
 dispatcher = Dispatcher(bot)
 
+stickers_list = [
+    'CAACAgIAAxkBAAEIENNkCgRsmUrCEOWqAAGjcOGqwJimybwAAm8AA8GcYAzLDn2LwN1NVi8E',
+    'CAACAgIAAxkBAAEIAQhkBEaOqezxBZAqH2nncSJrIfriswACVAADQbVWDGq3-McIjQH6LgQ',
+    'CAACAgIAAxkBAAEIENFkCgRWQThlT61o41mTI-DQdxbuSwACIwEAAjDUnRGe2TeBrqpcAi8E',
+    'CAACAgIAAxkBAAEIEM9kCgRMNI4rrGxTnrlBaUQ_8t-JlgACbgUAAj-VzAqGOtldiLy3NS8E',
+    'CAACAgIAAxkBAAEIEMtkCgQ9FQxjlqfsKiam4Ohk-DeKsQACBQADwDZPE_lqX5qCa011LwQ',
+    'CAACAgIAAxkBAAEIEMlkCgQnrCdSYaAvXdPN0OPASfuwvwACEQMAAvPjvgsZbp8lnswsJC8E',
+    'CAACAgIAAxkBAAEIENdkCgTm-_jCWE1eMoBB6ZYjNS1fOgACpgADUomRI2u5KhCNt8e8LwQ'
+]
 
 def append_to_base(id, data):
     connection = sqlite3.connect('database.db')
@@ -117,11 +126,12 @@ class Play:
 
 @dispatcher.message_handler(commands=['start_play'])
 async def give_word(message):
-    play = Play()
-    play.generate_word()
-    if not check_base(message.from_user.id):
+    play = Play()  # Класс игры
+    play.generate_word()  # Генерация нового слова
+
+    if not check_base(message.from_user.id):  # Если пользователя нет в бд
         append_to_base(message.from_user.id, play.encode())
-    else:
+    else:  # Если пользователь уже есть в бд
         update_base(message.from_user.id, play.encode())
 
     keyboard = InlineKeyboardMarkup(row_width=11)
@@ -140,7 +150,7 @@ async def give_word(message):
         open('images/6.png', 'rb'),
         f'Я загадал слово. Попробуй отгадать:\n{play.get_string()}',
         parse_mode='HTML',
-        reply_markup=keyboard
+        reply_markup=keyboard,
     )
 
 
@@ -148,11 +158,29 @@ async def give_word(message):
 async def welcome(message: types.Message):
     play = Play()
     play.generate_word()
+
     if not check_base(message.from_user.id):
         append_to_base(message.from_user.id, play.encode())
-    await bot.send_sticker(message.from_user.id,
-                           sticker='CAACAgIAAxkBAAEIAQhkBEaOqezxBZAqH2nncSJrIfriswACVAADQbVWDGq3-McIjQH6LgQ')
-    await message.answer(text=f'Привет, <b>{message.from_user.first_name}</b>!', parse_mode='HTML')
+
+    await bot.send_sticker(
+        message.from_user.id,
+        sticker=random.choice(stickers_list)
+    )
+    text = f'''Привет, {message.from_user.first_name}! Я - <b> Бот Виселица</b>. Со мной ты можешь сыграть в
+игру, я загадываю слово - твоя задача его угадать. У тебя будет возможность выбрать любую букву русского алфавита. ⚠️
+
+Если ты 6 раз назовешь неправильную букву, увы, проиграешь. Также я даю подсказки (каждую 1 раз):
+1) Назвать 3 буквы, которых точно нет в слове ❌
+2) Открыть 1 букву из слова ✅
+3) Сказать значение слова 💬
+
+Наверное, тебе осталось разобраться лишь с управлением, тут все просто - жми на кнопки и получай удовольствие!🙂
+<i>Чтобы начать нажми сюда 👉 /start_play</i>
+    '''
+    await message.answer(
+        text=text,
+        parse_mode='HTML',
+    )
 
 
 @dispatcher.message_handler(commands=['help'])
@@ -200,6 +228,14 @@ async def callback(callback):
         keyboard.add(btns[8], btns[9], btns[10], btns[11], btns[12], btns[13], btns[14], btns[15])
         keyboard.add(btns[16], btns[17], btns[18], btns[19], btns[20], btns[21], btns[22], btns[23])
         keyboard.add(btns[24], btns[25], btns[26], btns[27], btns[28], btns[29], btns[30], btns[31])
+        btn1 = InlineKeyboardButton(text='Открыть букву', callback_data='open_letter')
+        btn2 = InlineKeyboardButton(text='Значение слова', callback_data='meaning')
+        btn3 = InlineKeyboardButton(text='Убрать 3 буквы', callback_data='delete_letter')
+        btn4 = InlineKeyboardButton(text='Закончить игру', callback_data='stop_play')
+        keyboard.add(btn1)
+        keyboard.add(btn2)
+        keyboard.add(btn3)
+        keyboard.add(btn4)
         file = InputMedia(media=InputFile(
             f'images/{play.live}.png'),
             caption=f"Я загадал слово. Попробуй отгадать:\n{play.get_string()}")
@@ -208,3 +244,4 @@ async def callback(callback):
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher)
+
