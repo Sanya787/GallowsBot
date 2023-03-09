@@ -3,9 +3,9 @@ import random
 import sqlite3
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedia, InputFile
 
-TOKEN_API = '5699235424:AAGjp9Oraq4KdwYDvYTfLuoWPurp85GEtqY'
+TOKEN_API = 'TOKEN'
 
 bot = Bot(TOKEN_API)
 dispatcher = Dispatcher(bot)
@@ -135,8 +135,10 @@ async def give_word(message):
     keyboard.add(btns[8], btns[9], btns[10], btns[11], btns[12], btns[13], btns[14], btns[15])
     keyboard.add(btns[16], btns[17], btns[18], btns[19], btns[20], btns[21], btns[22], btns[23])
     keyboard.add(btns[24], btns[25], btns[26], btns[27], btns[28], btns[29], btns[30], btns[31])
-    await message.answer(
-        text=f'Я загадал слово. Попробуй отгадать:\n{play.get_string()}',
+    await bot.send_photo(
+        message.chat.id,
+        open('images/6.png', 'rb'),
+        f'Я загадал слово. Попробуй отгадать:\n{play.get_string()}',
         parse_mode='HTML',
         reply_markup=keyboard
     )
@@ -168,22 +170,41 @@ async def helps(message: types.Message):
 async def callback(callback):
     play = Play()
     play.decode(get_from_base(callback.from_user.id))
-    play.use_letter(callback.data.lower())
-    play.all_letters += callback.data.lower()
-    update_base(callback.from_user.id, play.encode())
-    keyboard = InlineKeyboardMarkup(row_width=11)
-    btns = []
-    for elem in play.get_buttons_line():
-        btns.append(InlineKeyboardButton(text=elem, callback_data=elem))
-    keyboard.add(btns[0], btns[1], btns[2], btns[3], btns[4], btns[5], btns[6], btns[7])
-    keyboard.add(btns[8], btns[9], btns[10], btns[11], btns[12], btns[13], btns[14], btns[15])
-    keyboard.add(btns[16], btns[17], btns[18], btns[19], btns[20], btns[21], btns[22], btns[23])
-    keyboard.add(btns[24], btns[25], btns[26], btns[27], btns[28], btns[29], btns[30], btns[31])
-    await callback.message.answer(
-        text=f'Я загадал слово. Попробуй отгадать:\n{play.get_string()}',
-        parse_mode='HTML',
-        reply_markup=keyboard
-    )
+    if callback.data != ' ':
+        play.use_letter(callback.data.lower())
+        play.all_letters += callback.data.lower()
+        update_base(callback.from_user.id, play.encode())
+    flag = True
+    for elem in play.word:
+        if elem not in play.guessed_letters:
+            flag = False
+    if play.live < 1:
+        await callback.message.answer(
+            text=f'К сожалению, вы проиграли:(',
+            parse_mode='HTML',
+        )
+        await callback.message.delete()
+    elif flag:
+        await callback.message.answer(
+            text=f'Поздравляю! Вы угадали слово!',
+            parse_mode='HTML',
+        )
+        await callback.message.delete()
+
+    else:
+        keyboard = InlineKeyboardMarkup(row_width=11)
+        btns = []
+        for elem in play.get_buttons_line():
+            btns.append(InlineKeyboardButton(text=elem, callback_data=elem))
+        keyboard.add(btns[0], btns[1], btns[2], btns[3], btns[4], btns[5], btns[6], btns[7])
+        keyboard.add(btns[8], btns[9], btns[10], btns[11], btns[12], btns[13], btns[14], btns[15])
+        keyboard.add(btns[16], btns[17], btns[18], btns[19], btns[20], btns[21], btns[22], btns[23])
+        keyboard.add(btns[24], btns[25], btns[26], btns[27], btns[28], btns[29], btns[30], btns[31])
+        file = InputMedia(media=InputFile(
+            f'images/{play.live}.png'),
+            caption=f"Я загадал слово. Попробуй отгадать:\n{play.get_string()}")
+        await callback.message.edit_media(file, reply_markup=keyboard)
+
 
 if __name__ == '__main__':
     executor.start_polling(dispatcher)
