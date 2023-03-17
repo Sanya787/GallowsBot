@@ -10,6 +10,7 @@ class Game:
         self.guessed_letters = ' '
         self.all_letters = ' '
         self.buttons_line = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧЩШЬЫЪЭЮЯ'
+        self.use_clue = '111'
 
     def encode(self):
         string = ''
@@ -18,10 +19,10 @@ class Game:
         string2 = ''
         for elem in self.all_letters:
             string2 += elem
-        return '---'.join([self.word, self.meaning, str(self.live), string, string2])
+        return '---'.join([self.word, self.meaning, str(self.live), string, string2, self.use_clue])
 
     def decode(self, string):
-        self.word, self.meaning, self.live, self.guessed_letters, self.all_letters = string.split('---')
+        self.word, self.meaning, self.live, self.guessed_letters, self.all_letters, self.use_clue = string.split('---')
         self.live = int(self.live)
 
     def get_string(self):
@@ -47,6 +48,14 @@ class Game:
             f = cat_file.read()
             data = json.loads(f)
             key = random.choice(list(data.items()))
+        self.word = ''
+        for elem in key[0]:
+            if elem == 'ё':
+                self.word += 'е'
+            elif elem == '-':
+                self.generate_word()
+            else:
+                self.word += elem
         self.word = key[0]
         self.meaning = key[1]['definition']
         self.guessed_letters += self.word[0]
@@ -59,6 +68,23 @@ class Game:
             self.guessed_letters += letter
         else:
             self.live -= 1
+
+    def delete_letters(self):
+        string = ''
+        while len(string) < 3:
+            a = random.choice(self.buttons_line).lower()
+            if a not in self.word and a not in string:
+                string += a
+        for elem in string:
+            self.all_letters += elem
+
+    def get_letter(self):
+        a = random.choice(self.word)
+        if a not in self.guessed_letters:
+            self.guessed_letters += a
+            self.all_letters += a
+        else:
+            self.get_letter()
 
     def get_meaning(self):
         return self.meaning
