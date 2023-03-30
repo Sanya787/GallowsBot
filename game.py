@@ -1,5 +1,103 @@
 import json
 import random
+import pprint
+from typing import Iterable
+
+
+WordWeights = dict[str, float]
+LetterProbs = dict[str, float]
+
+
+def get_letter_prob(word2weight: WordWeights, # Считает проценты без буквы
+                    letter: str,
+                    ) -> float:
+    total_weight = sum(word2weight.values())
+    letter_weight = sum(
+        weight
+        for word, weight in word2weight.items()
+        if letter in word
+    )
+    return letter_weight / total_weight
+
+
+def remove_containing_letter(word2weight: WordWeights, # Убирает слова с учетом буквы
+                             letter: str,
+                             ) -> WordWeights:
+    return {
+        word: weight
+        for word, weight in word2weight.items()
+        if letter not in word
+    }
+
+
+def get_all_letter_positions(word: str, letter: str) -> tuple[int]: # Получить кортеж позиций буквы в слове
+    return tuple(
+        idx
+        for idx, ch in enumerate(word)
+        if ch == letter
+    )
+
+
+def filter_vocabulary_by_mask(word2weight: WordWeights, # Загаданное слово и названия буква -> Новый словарь
+                              answer: str,
+                              letter: str,
+                              ) -> WordWeights:
+    answer_pos = get_all_letter_positions(answer, letter)
+    return {
+        word: weight
+        for word, weight in word2weight.items()
+        if get_all_letter_positions(word, letter) == answer_pos
+    }
+
+
+def make_move(word2weight: WordWeights, # Сократить словарь с учетом новой буквы
+              answer: str,
+              picked_letter: str) -> WordWeights:
+    if picked_letter in answer:
+        return filter_vocabulary_by_mask(word2weight, answer, picked_letter)
+    return remove_containing_letter(word2weight, picked_letter)
+
+
+def analyze_move(word2weight: WordWeights,
+                 answer: str,
+                 picked_letter: str,
+                 possible_letters: Iterable[str],
+                 ) -> tuple[WordWeights, LetterProbs]:
+    probs = {
+        letter: get_letter_prob(word2weight, letter)
+        for letter in possible_letters
+    }
+    new_vocab = make_move(word2weight, answer, picked_letter)
+    return new_vocab, probs
+
+
+def analyze_game(answer: str,
+                 picked_letters: Iterable[str],
+                 ) -> list[LetterProbs]:
+    with open('words.json') as cat_file:
+        f = cat_file.read()
+    data = json.loads(f)
+    word2weight = {}
+    for key in data:
+        if len(key) == len(answer):
+            word2weight[key] = 1.00
+    word2weight = {
+        word: weight
+        for word, weight in word2weight.items()
+        if len(word) == len(answer)
+    }
+    possible_letters = set('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'.lower())
+    all_probs = []
+    for picked_letter in picked_letters:
+        word2weight, probs = analyze_move(
+            word2weight,
+            answer,
+            picked_letter,
+            possible_letters,
+        )
+        all_probs.append(probs)
+        possible_letters.remove(picked_letter)
+    return all_probs
 
 
 class Game:
@@ -60,7 +158,7 @@ class Game:
         self.meaning = key[1]['definition']
         self.guessed_letters += self.word[0]
         self.buttons_line = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧЩШЬЫЪЭЮЯ'
-        self.all_letters = ' '
+        self.all_letters += self.word[0]
         self.live = 6
 
     def use_letter(self, letter):
@@ -88,3 +186,7 @@ class Game:
 
     def get_meaning(self):
         return self.meaning
+
+
+if __name__ == '__main__':
+    pprint.pprint(analyze_game('акр', 'иапк'))
