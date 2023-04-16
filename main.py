@@ -24,8 +24,7 @@ async def get_address(message: types.Message, state):
     file_id = message.document.file_id
     file = await bot.get_file(file_id)
     await bot.download_file(file.file_path, f"{message.from_user.id}.txt")
-    # with open(f'{message.from_user.id}.txt', 'r') as file:
-    #    print(file.read())
+    await bot.send_message(message.chat.id, 'Поздравляем! Слова успешно добавлены в профиль ✅')
     await state.finish()
 
 stickers_list = [
@@ -163,8 +162,10 @@ async def callback(callback):
         elif callback.data == 'append_words':
             text = '''Для добавления нового словаря отправьте файл формата .txt, 
 где будут на каждой новой строке храниться ваши слова в формате:
-(Слово):(Значение)'''
+(Слово):(Значение).
+<i>Пример такого файла: </i>'''
             await bot.send_message(callback.from_user.id, text=text, parse_mode='HTML')
+            await bot.send_document(callback.from_user.id, open('test.txt', 'r'))
             await UserState.file.set()
 
     elif callback.data in ['open_letter', 'meaning', 'stop_play', 'delete_letter', 'stop']:
