@@ -141,21 +141,30 @@ class Game:
                 string += elem
         return string
 
-    def generate_word(self):
-        with open('words.json') as cat_file:
-            f = cat_file.read()
-            data = json.loads(f)
-            key = random.choice(list(data.items()))
-        self.word = ''
-        for elem in key[0]:
-            if elem == 'ё':
-                self.word += 'е'
-            elif elem == '-':
-                self.generate_word()
-            else:
-                self.word += elem
-        self.word = key[0]
-        self.meaning = key[1]['definition']
+    def generate_word(self, name=None):
+        if name and random.randint(1, 10) == 2:
+            with open(name, 'r') as f:
+                dictionary = {}
+                for elem in f.read().split('\n'):
+                    word, znach = elem.split(':')
+                    dictionary[word] = znach
+                self.word = random.choice(list(dictionary))
+                self.meaning = dictionary[self.word]
+        else:
+            with open('words.json') as cat_file:
+                f = cat_file.read()
+                data = json.loads(f)
+                key = random.choice(list(data.items()))
+            self.word = ''
+            for elem in key[0]:
+                if elem == 'ё':
+                    self.word += 'е'
+                elif elem == '-':
+                    self.generate_word()
+                else:
+                    self.word += elem
+            self.word = key[0]
+            self.meaning = key[1]['definition']
         self.guessed_letters += self.word[0]
         self.buttons_line = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧЩШЬЫЪЭЮЯ'
         self.all_letters += self.word[0]
