@@ -1,4 +1,5 @@
 import random
+import os.path
 
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -21,11 +22,16 @@ class UserState(StatesGroup):
 
 @dispatcher.message_handler(content_types=['any'], state=UserState.file)
 async def get_address(message: types.Message, state):
-    file_id = message.document.file_id
-    file = await bot.get_file(file_id)
-    await bot.download_file(file.file_path, f"{message.from_user.id}.txt")
-    await bot.send_message(message.chat.id, 'Поздравляем! Слова успешно добавлены в профиль ✅')
-    await state.finish()
+    try:
+        file_id = message.document.file_id
+        file = await bot.get_file(file_id)
+
+        await bot.download_file(file.file_path, f"{message.from_user.id}.txt")
+        await bot.send_message(message.chat.id, 'Поздравляем! Слова успешно добавлены в профиль ✅')
+        await state.finish()
+    except:
+        await bot.send_message(message.chat.id, '❌ Это не файл или файла не того формата. Попробуйте снова ')
+        await state.finish()
 
 stickers_list = [
     'CAACAgIAAxkBAAEIENNkCgRsmUrCEOWqAAGjcOGqwJimybwAAm8AA8GcYAzLDn2LwN1NVi8E',
@@ -41,8 +47,10 @@ stickers_list = [
 
 
 def get_keyboard(game):
+
     keyboard = InlineKeyboardMarkup(row_width=11)
     btns = []
+
     for elem in game.get_buttons_line():
         btns.append(InlineKeyboardButton(text=elem, callback_data=elem))
     keyboard.add(btns[0], btns[1], btns[2], btns[3], btns[4], btns[5], btns[6], btns[7])
@@ -60,13 +68,19 @@ def get_keyboard(game):
         keyboard.add(btn3)
     btn4 = InlineKeyboardButton(text='❌ Закончить игру', callback_data='stop_play')
     keyboard.add(btn4)
+
     return keyboard
 
 
 @dispatcher.message_handler(commands=['start_play'])
 async def give_word(message):
     game = Game()  # Класс игры
-    game.generate_word()  # Генерация нового слова
+    file_path = f"{message.from_user.id}.txt"
+    if os.path.exists(file_path):
+        game.generate_word(file_path)
+    else:
+        game.generate_word()  # Генерация нового слова
+
     cort = get_from_stat(message.from_user.id)
     cort_new = cort[1], cort[2], cort[3] + 1, cort[4]
     update_base_stat(message.from_user.id, cort_new)
@@ -89,7 +103,11 @@ async def give_word(message):
 @dispatcher.message_handler(commands=['start'])
 async def welcome(message: types.Message):
     game = Game()
-    game.generate_word()
+    file_path = f"{message.from_user.id}.txt"
+    if os.path.exists(file_path):
+        game.generate_word(file_path)
+    else:
+        game.generate_word()
 
     if not check_base(message.from_user.id):
         append_to_base(message.from_user.id, game.encode())
@@ -105,6 +123,7 @@ async def welcome(message: types.Message):
     )
     text = f'''Привет, {message.from_user.first_name}! Я - <b> Бот Виселица</b>. Со мной ты можешь сыграть в
 игру, я загадываю слово - твоя задача его угадать. У тебя будет возможность выбрать любую букву русского алфавита. ⚠️
+<i>Ты всегда можешь написать мне /help и я помогу тебе :)</i>
 
 Если ты 6 раз назовешь неправильную букву, увы, проиграешь. Также я даю подсказки (каждую 1 раз):
 1) Назвать 3 буквы, которых точно нет в слове ❌
@@ -135,17 +154,25 @@ async def welcome(message: types.Message):
 @dispatcher.message_handler(commands=['help'])
 async def helps(message: types.Message):
     text = '''
-    Мои команды:
+Я -  Бот Виселица. Со мной ты можешь сыграть в
+игру, я загадываю слово - твоя задача его угадать. У тебя будет возможность выбрать любую букву русского алфавита. ⚠️
+
+Если ты 6 раз назовешь неправильную букву, увы, проиграешь. Также я даю подсказки (каждую 1 раз):
+1) Назвать 3 буквы, которых точно нет в слове ❌
+2) Открыть 1 букву из слова ✅
+3) Сказать значение слова 💬
+
+Основные команды:
 /start - запуск
+/start_play - начать игру
 /help - выводит данное окно
-/start_play - пока что просто загадывает слово
     '''
     await message.answer(text=text, parse_mode='HTML')
 
 
 @dispatcher.callback_query_handler()
 async def callback(callback):
-    if callback.data in ['start_play', 'see_static', 'append_words']:
+    if callback.data in ['start_play', 'see_static', 'append_words', 'settings']:
         if callback.data == 'start_play':
             await give_word(callback)
 
@@ -162,11 +189,13 @@ async def callback(callback):
         elif callback.data == 'append_words':
             text = '''Для добавления нового словаря отправьте файл формата .txt, 
 где будут на каждой новой строке храниться ваши слова в формате:
-(Слово):(Значение).
-<i>Пример такого файла: </i>'''
+<b>(Слово):(Значение).</b>
+<i>Пример такого файла:</i>'''
             await bot.send_message(callback.from_user.id, text=text, parse_mode='HTML')
-            await bot.send_document(callback.from_user.id, open('test.txt', 'r'))
+            # await bot.send_document(callback.from_user.id, open('test.txt', encoding='UTF-8'))
             await UserState.file.set()
+        elif callback.data == 'settings':
+            pass
 
     elif callback.data in ['open_letter', 'meaning', 'stop_play', 'delete_letter', 'stop']:
         if callback.data == 'stop_play':
@@ -254,7 +283,8 @@ async def callback(callback):
             parse_mode='HTML',
             reply_markup=keyboard
         )
-
+    elif callback.data == ' ':
+        pass
     else:
         game = Game()
         game.decode(get_from_base(callback.from_user.id))
@@ -290,7 +320,7 @@ async def callback(callback):
 
             await bot.send_message(
                 chat_id=callback.from_user.id,
-                text=f'К сожалению, вы проиграли:( Попробовать снова?',
+                text=f'К сожалению, вы проиграли:( Попробовать снова?\nСлово было: <b>{game.word}</b>',
                 parse_mode='HTML',
                 reply_markup=keyboard
             )
