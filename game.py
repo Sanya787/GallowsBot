@@ -74,7 +74,7 @@ def analyze_move(word2weight: WordWeights,
 def analyze_game(answer: str,
                  picked_letters: Iterable[str],
                  ) -> list[LetterProbs]:
-    with open('words.json') as cat_file:
+    with open('words.json', encoding='UTF-8') as cat_file:
         f = cat_file.read()
     data = json.loads(f)
     word2weight = {}
@@ -143,7 +143,7 @@ class Game:
 
     def generate_word(self, name=None):
         if name and random.randint(1, 10) == 2:
-            with open(name, 'r') as f:
+            with open(name, 'r', encoding='UTF-8') as f:
                 dictionary = {}
                 for elem in f.read().split('\n'):
                     word, znach = elem.split(':')
@@ -151,7 +151,7 @@ class Game:
                 self.word = random.choice(list(dictionary))
                 self.meaning = dictionary[self.word]
         else:
-            with open('words.json') as cat_file:
+            with open('words.json', encoding='UTF-8') as cat_file:
                 f = cat_file.read()
                 data = json.loads(f)
                 key = random.choice(list(data.items()))
