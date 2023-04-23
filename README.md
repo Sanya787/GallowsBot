@@ -13,4 +13,3 @@ Telegram bot with which you can play the popular game "Gallows"
 ## Codestyle linters and test frameworks
 ##### 1. flake8
 ##### 2. mypy
-##### 3. pydocstyle
