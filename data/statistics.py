@@ -2,7 +2,7 @@ import sqlalchemy
 from data.db_session import SqlAlchemyBase
 
 
-class Stats(SqlAlchemyBase):
+class Stats(SqlAlchemyBase):  # type: ignore
     __tablename__ = 'statistics'
 
     id = sqlalchemy.Column(sqlalchemy.Integer,
