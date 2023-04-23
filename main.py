@@ -4,12 +4,14 @@ import os.path
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedia, InputFile,\
-    ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton,\
+    InputMedia, InputFile, ReplyKeyboardMarkup
 from game import Game, analyze_game
-from database_interaction import *
+from database_interaction import append_to_base, update_base,\
+    check_base, get_from_base, append_to_statistics,\
+    update_base_stat, get_from_stat
 
-TOKEN_API = 'TOKEN'
+TOKEN_API = '5699235424:AAGjp9Oraq4KdwYDvYTfLuoWPurp85GEtqY'
 
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
@@ -27,10 +29,14 @@ async def get_address(message: types.Message, state):
         file = await bot.get_file(file_id)
 
         await bot.download_file(file.file_path, f"{message.from_user.id}.txt")
-        await bot.send_message(message.chat.id, 'Поздравляем! Слова успешно добавлены в профиль ✅')
+        await bot.send_message(
+            message.chat.id,
+            'Поздравляем! Слова успешно добавлены в профиль ✅')
         await state.finish()
-    except:
-        await bot.send_message(message.chat.id, '❌ Это не файл или файла не того формата. Попробуйте снова ')
+    except Exception:
+        await bot.send_message(
+            message.chat.id,
+            '❌ Это не файл или файла не того формата. Попробуйте снова ')
         await state.finish()
 
 stickers_list = [
@@ -53,20 +59,32 @@ def get_keyboard(game):
 
     for elem in game.get_buttons_line():
         btns.append(InlineKeyboardButton(text=elem, callback_data=elem))
-    keyboard.add(btns[0], btns[1], btns[2], btns[3], btns[4], btns[5], btns[6], btns[7])
-    keyboard.add(btns[8], btns[9], btns[10], btns[11], btns[12], btns[13], btns[14], btns[15])
-    keyboard.add(btns[16], btns[17], btns[18], btns[19], btns[20], btns[21], btns[22], btns[23])
-    keyboard.add(btns[24], btns[25], btns[26], btns[27], btns[28], btns[29], btns[30], btns[31])
+    keyboard.add(*[btns[i] for i in range(0, 8)])
+    keyboard.add(*[btns[i] for i in range(8, 16)])
+    keyboard.add(*[btns[i] for i in range(16, 24)])
+    keyboard.add(*[btns[i] for i in range(24, 32)])
     if game.use_clue[0] == '1':
-        btn1 = InlineKeyboardButton(text='✅ Открыть букву', callback_data='open_letter')
+        btn1 = InlineKeyboardButton(
+            text='✅ Открыть букву',
+            callback_data='open_letter'
+        )
         keyboard.add(btn1)
     if game.use_clue[1] == '1':
-        btn2 = InlineKeyboardButton(text='💭 Значение слова', callback_data='meaning')
+        btn2 = InlineKeyboardButton(
+            text='💭 Значение слова',
+            callback_data='meaning'
+        )
         keyboard.add(btn2)
     if game.use_clue[2] == '1':
-        btn3 = InlineKeyboardButton(text='🔂 Убрать 3 буквы', callback_data='delete_letter')
+        btn3 = InlineKeyboardButton(
+            text='🔂 Убрать 3 буквы',
+            callback_data='delete_letter'
+        )
         keyboard.add(btn3)
-    btn4 = InlineKeyboardButton(text='❌ Закончить игру', callback_data='stop_play')
+    btn4 = InlineKeyboardButton(
+        text='❌ Закончить игру',
+        callback_data='stop_play'
+    )
     keyboard.add(btn4)
 
     return keyboard
@@ -114,35 +132,48 @@ async def welcome(message: types.Message):
         append_to_statistics(message.from_user.id)
 
     keyboard = ReplyKeyboardMarkup()
-    keyboard.add(KeyboardButton('Об авторе'), KeyboardButton('О проекте'), KeyboardButton('Обратная связь'))
+    # keyboard.add(KeyboardButton('Об авторе'),
+    # KeyboardButton('О проекте'), KeyboardButton('Обратная связь'))
 
     await bot.send_sticker(
         message.from_user.id,
         sticker=random.choice(stickers_list),
         # reply_markup=keyboard
     )
-    text = f'''Привет, {message.from_user.first_name}! Я - <b> Бот Виселица</b>. Со мной ты можешь сыграть в
-игру, я загадываю слово - твоя задача его угадать. У тебя будет возможность выбрать любую букву русского алфавита. ⚠️
+    name = message.from_user.first_name
+    text = f'''
+Привет, {name}! Я - <b> Бот Виселица</b>. Со мной ты можешь сыграть в
+игру, я загадываю слово - твоя задача его угадать. У тебя
+будет возможность выбрать любую букву русского алфавита. ⚠️
 <i>Ты всегда можешь написать мне /help и я помогу тебе :)</i>
 
-Если ты 6 раз назовешь неправильную букву, увы, проиграешь. Также я даю подсказки (каждую 1 раз):
+Если ты 6 раз назовешь неправильную букву, увы, проиграешь.
+Также я даю подсказки (каждую 1 раз):
 1) Назвать 3 буквы, которых точно нет в слове ❌
 2) Открыть 1 букву из слова ✅
 3) Сказать значение слова 💬
 
-Наверное, тебе осталось разобраться лишь с управлением, тут все просто - жми на кнопки и получай удовольствие!🙂
+Наверное, тебе осталось разобраться лишь с управлением, тут все
+просто - жми на кнопки и получай удовольствие!🙂
 <i>Чтобы начать нажми сюда 👉 /start_play</i>
     '''
 
     keyboard = InlineKeyboardMarkup(row_width=11)
-    btn1 = InlineKeyboardButton(text='Играть 🎲', callback_data='start_play')
-    btn2 = InlineKeyboardButton(text='Смотреть статистику 📈', callback_data='see_static')
-    btn3 = InlineKeyboardButton(text='Добавить свои слова ✏️', callback_data='append_words')
-    btn4 = InlineKeyboardButton(text='Настроить словари ⚙', callback_data='settings')
+    btn1 = InlineKeyboardButton(
+        text='Играть 🎲',
+        callback_data='start_play'
+    )
+    btn2 = InlineKeyboardButton(
+        text='Смотреть статистику 📈',
+        callback_data='see_static'
+    )
+    btn3 = InlineKeyboardButton(
+        text='Добавить свои слова ✏️',
+        callback_data='append_words'
+    )
     keyboard.add(btn1)
     keyboard.add(btn2)
     keyboard.add(btn3)
-    keyboard.add(btn4)
 
     await message.answer(
         text=text,
@@ -155,9 +186,11 @@ async def welcome(message: types.Message):
 async def helps(message: types.Message):
     text = '''
 Я -  Бот Виселица. Со мной ты можешь сыграть в
-игру, я загадываю слово - твоя задача его угадать. У тебя будет возможность выбрать любую букву русского алфавита. ⚠️
+игру, я загадываю слово - твоя задача его угадать. У тебя будет
+ возможность выбрать любую букву русского алфавита. ⚠️
 
-Если ты 6 раз назовешь неправильную букву, увы, проиграешь. Также я даю подсказки (каждую 1 раз):
+Если ты 6 раз назовешь неправильную букву, увы, проиграешь. Также
+я даю подсказки (каждую 1 раз):
 1) Назвать 3 буквы, которых точно нет в слове ❌
 2) Открыть 1 букву из слова ✅
 3) Сказать значение слова 💬
@@ -172,7 +205,20 @@ async def helps(message: types.Message):
 
 @dispatcher.callback_query_handler()
 async def callback(callback):
-    if callback.data in ['start_play', 'see_static', 'append_words', 'settings']:
+    check_box = [
+        'start_play',
+        'see_static',
+        'append_words',
+        'settings'
+    ]
+    data_box = [
+        'open_letter',
+        'meaning',
+        'stop_play',
+        'delete_letter',
+        'stop'
+    ]
+    if callback.data in check_box:
         if callback.data == 'start_play':
             await give_word(callback)
 
@@ -184,23 +230,33 @@ async def callback(callback):
 Всего проведено игр: {data[3]} 🏳️
 Выиграно дружеских игр: {data[4]} 🤝
 '''
-            await bot.send_message(callback.from_user.id, text=text, parse_mode='HTML')
+            await bot.send_message(
+                callback.from_user.id,
+                text=text,
+                parse_mode='HTML'
+            )
 
         elif callback.data == 'append_words':
-            text = '''Для добавления нового словаря отправьте файл формата .txt, 
+            text = '''Для добавления нового словаря отправьте файл формата txt,
 где будут на каждой новой строке храниться ваши слова в формате:
 <b>(Слово):(Значение).</b>
 <i>Пример такого файла:</i>'''
-            await bot.send_message(callback.from_user.id, text=text, parse_mode='HTML')
-            # await bot.send_document(callback.from_user.id, open('test.txt', encoding='UTF-8'))
+            await bot.send_message(
+                callback.from_user.id,
+                text=text,
+                parse_mode='HTML'
+            )
+            await bot.send_document(
+            callback.from_user.id,
+            open('test.txt', encoding='UTF-8'))
             await UserState.file.set()
         elif callback.data == 'settings':
             pass
 
-    elif callback.data in ['open_letter', 'meaning', 'stop_play', 'delete_letter', 'stop']:
+    elif callback.data in data_box:
         if callback.data == 'stop_play':
             await callback.message.answer(
-                text=f'Игра приостановлена',
+                text='Игра приостановлена',
                 parse_mode='HTML',
             )
 
@@ -216,13 +272,18 @@ async def callback(callback):
             update_base(callback.from_user.id, game.encode())
 
             keyboard = get_keyboard(game)
+            cap = f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}"
             text = f'<i><b>Подсказка:</b></i> \n{game.get_meaning()}'
             file = InputMedia(media=InputFile(
                 f'images/{game.live}.png'),
-                caption=f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}")
+                caption=cap)
 
             await callback.message.edit_media(file, reply_markup=keyboard)
-            await bot.send_message(callback.from_user.id, text=text, parse_mode='HTML')
+            await bot.send_message(
+                callback.from_user.id,
+                text=text,
+                parse_mode='HTML'
+            )
 
         elif callback.data == 'delete_letter':
             game = Game()
@@ -233,9 +294,10 @@ async def callback(callback):
             update_base(callback.from_user.id, game.encode())
 
             keyboard = get_keyboard(game)
+            cap = f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}"
             file = InputMedia(media=InputFile(
                 f'images/{game.live}.png'),
-                caption=f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}")
+                caption=cap)
             await callback.message.edit_media(file, reply_markup=keyboard)
 
         elif callback.data == 'open_letter':
@@ -246,9 +308,10 @@ async def callback(callback):
             update_base(callback.from_user.id, game.encode())
 
             keyboard = get_keyboard(game)
+            cap = f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}"
             file = InputMedia(media=InputFile(
                 f'images/{game.live}.png'),
-                caption=f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}")
+                caption=cap)
             await callback.message.edit_media(file, reply_markup=keyboard)
 
     elif 'aw: ' in callback.data:
@@ -267,9 +330,12 @@ async def callback(callback):
                 message += f'\nХод номер {idx + 1}! Ход нелогичный ❌'
 
             message += '\nЛучшие варианты ходов:'
-            message += f'\n 1) {result_elem[-1][0]}: {str(result_elem[-1][1] * 100)[:4]}%'
-            message += f'\n 2) {result_elem[-2][0]}: {str(result_elem[-2][1] * 100)[:4]}%'
-            message += f'\n 3) {result_elem[-3][0]}: {str(result_elem[-3][1] * 100)[:4]}%'
+            message += f'\n 1) {result_elem[-1][0]}'
+            message += f': {str(result_elem[-1][1] * 100)[:4]}%'
+            message += f'\n 2) {result_elem[-2][0]}'
+            message += f': {str(result_elem[-2][1] * 100)[:4]}%'
+            message += f'\n 3) {result_elem[-3][0]}'
+            message += f': {str(result_elem[-3][1] * 100)[:4]}%'
             message += '\n======================='
 
         keyboard = InlineKeyboardMarkup()
@@ -307,20 +373,25 @@ async def callback(callback):
 
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton(
-                text='Играть 🎲', callback_data='start_play'
+                text='Играть 🎲',
+                callback_data='start_play'
             ))
 
             keyboard.add(InlineKeyboardButton(
-                text='Завершить ❌', callback_data='stop'
+                text='Завершить ❌',
+                callback_data='stop'
             ))
 
             keyboard.add(InlineKeyboardButton(
-                text='Анализ игры 📈', callback_data=f'aw: {game.word}.{game.all_letters}'
+                text='Анализ игры 📈',
+                callback_data=f'aw: {game.word}.{game.all_letters}'
             ))
 
+            a = 'К сожалению, вы проиграли:('
+            b = f' Попробовать снова?\nСлово было: <b>{game.word}</b>'
             await bot.send_message(
                 chat_id=callback.from_user.id,
-                text=f'К сожалению, вы проиграли:( Попробовать снова?\nСлово было: <b>{game.word}</b>',
+                text=a + b,
                 parse_mode='HTML',
                 reply_markup=keyboard
             )
@@ -333,20 +404,23 @@ async def callback(callback):
 
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton(
-                text='Играть 🎲', callback_data='start_play'
+                text='Играть 🎲',
+                callback_data='start_play'
             ))
 
             keyboard.add(InlineKeyboardButton(
-                text='Завершить ❌', callback_data='stop'
+                text='Завершить ❌',
+                callback_data='stop'
             ))
 
             keyboard.add(InlineKeyboardButton(
-                text='Анализ игры 📈', callback_data=f'aw: {game.word}.{game.all_letters}'
+                text='Анализ игры 📈',
+                callback_data=f'aw: {game.word}.{game.all_letters}'
             ))
 
             await bot.send_message(
                 chat_id=callback.from_user.id,
-                text=f'Поздравляю! Вы угадали слово! Хотите сыграть ещё?',
+                text='Поздравляю! Вы угадали слово! Хотите сыграть ещё?',
                 parse_mode='HTML',
                 reply_markup=keyboard
             )
@@ -355,10 +429,10 @@ async def callback(callback):
 
         else:
             keyboard = get_keyboard(game)
-
+            cap = f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}"
             file = InputMedia(media=InputFile(
                 f'images/{game.live}.png'),
-                caption=f"Я загадал слово. Попробуй отгадать:\n{game.get_string()}")
+                caption=cap)
 
             await callback.message.edit_media(file, reply_markup=keyboard)
 
