@@ -8,7 +8,7 @@ WordWeights = dict[str, float]
 LetterProbs = dict[str, float]
 
 
-def get_letter_prob(word2weight: WordWeights, # Считает проценты без буквы
+def get_letter_prob(word2weight: WordWeights,
                     letter: str,
                     ) -> float:
     total_weight = sum(word2weight.values())
@@ -20,7 +20,7 @@ def get_letter_prob(word2weight: WordWeights, # Считает проценты 
     return letter_weight / total_weight
 
 
-def remove_containing_letter(word2weight: WordWeights, # Убирает слова с учетом буквы
+def remove_containing_letter(word2weight: WordWeights,
                              letter: str,
                              ) -> WordWeights:
     return {
@@ -30,7 +30,7 @@ def remove_containing_letter(word2weight: WordWeights, # Убирает слов
     }
 
 
-def get_all_letter_positions(word: str, letter: str) -> tuple[int]: # Получить кортеж позиций буквы в слове
+def get_all_letter_positions(word: str, letter: str) -> tuple[int, ...]:
     return tuple(
         idx
         for idx, ch in enumerate(word)
@@ -38,7 +38,7 @@ def get_all_letter_positions(word: str, letter: str) -> tuple[int]: # Получ
     )
 
 
-def filter_vocabulary_by_mask(word2weight: WordWeights, # Загаданное слово и названия буква -> Новый словарь
+def filter_vocabulary_by_mask(word2weight: WordWeights,
                               answer: str,
                               letter: str,
                               ) -> WordWeights:
@@ -50,7 +50,7 @@ def filter_vocabulary_by_mask(word2weight: WordWeights, # Загаданное �
     }
 
 
-def make_move(word2weight: WordWeights, # Сократить словарь с учетом новой буквы
+def make_move(word2weight: WordWeights,
               answer: str,
               picked_letter: str) -> WordWeights:
     if picked_letter in answer:
@@ -117,10 +117,20 @@ class Game:
         string2 = ''
         for elem in self.all_letters:
             string2 += elem
-        return '---'.join([self.word, self.meaning, str(self.live), string, string2, self.use_clue])
+        mas = [
+            self.word,
+            self.meaning,
+            str(self.live),
+            string, string2,
+            self.use_clue
+        ]
+        return '---'.join(mas)
 
     def decode(self, string):
-        self.word, self.meaning, self.live, self.guessed_letters, self.all_letters, self.use_clue = string.split('---')
+        data = string.split('---')
+        self.word, self.meaning, self.live = data[0], data[1], data[2]
+        self.guessed_letters, self.all_letters = data[3], data[4]
+        self.use_clue = data[5]
         self.live = int(self.live)
 
     def get_string(self):
