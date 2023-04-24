@@ -11,7 +11,7 @@ from database_interaction import append_to_base, update_base,\
     check_base, get_from_base, append_to_statistics,\
     update_base_stat, get_from_stat
 
-TOKEN_API = '5699235424:AAGjp9Oraq4KdwYDvYTfLuoWPurp85GEtqY'
+TOKEN_API = 'TOKEN'
 
 storage = MemoryStorage()
 bot = Bot(TOKEN_API)
