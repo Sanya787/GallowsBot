@@ -1,79 +1,84 @@
-from data import db_session
-from data.users import User
-from data.statistics import Stats
+import sqlite3
 
 
-db_session.global_init("db/database.db")
 def append_to_base(id, data):
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''INSERT INTO users (id, class)
+    VALUES({id}, "{data}");'''
+    cursor.execute(query)
+    connection.commit()
+    connection.close()
 
-    db_sess = db_session.create_session()
-    user = User(
-        id=id,
-        game=data
-    )
-    db_sess.add(user)
-    db_sess.commit()
-    db_sess.close()
 
-    
 def update_base(id, new_data):
-
-    db_sess = db_session.create_session()
-    user = db_sess.query(User).filter(User.id == id).first()
-    user.game = new_data
-    db_sess.commit()
-    db_sess.close()
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
     print(new_data)
+    query = f'''UPDATE users
+SET class = "{new_data}"
+WHERE id = {id};'''
+    cursor.execute(query)
+    connection.commit()
+    connection.close()
 
 
 def check_base(id):
-
-    db_sess = db_session.create_session()
-    user = db_sess.query(User).filter(User.id == id).first()
-    db_sess.close()
-    if user:
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''SELECT class FROM users
+    WHERE id = {id}'''
+    cursor.execute(query)
+    if cursor.fetchall():
         return True
     return False
 
 
 def get_from_base(id):
-
-    db_sess = db_session.create_session()
-    user = db_sess.query(User).filter(User.id == id).first()
-    db_sess.close()
-    return user.game
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''SELECT class FROM users
+WHERE id = {id}'''
+    cursor.execute(query)
+    return cursor.fetchall()[0][0]
 
 
 def append_to_statistics(id):
-
-    db_sess = db_session.create_session()
-    stats = Stats(
-        id=id,
-        vicroties=0,
-        wins_now=0,
-        total=0,
-        friendly_victories=0
-    )
-    db_sess.add(stats)
-    db_sess.commit()
-    db_sess.close()
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''INSERT INTO statistics (id, victories, wins_now, total, friendly_victories) 
+    VALUES({id}, 0, 0, 0, 0);'''
+    cursor.execute(query)
+    connection.commit()
+    connection.close()
 
 
 def update_base_stat(id, data):
-
-    db_sess = db_session.create_session()
-    stats = db_sess.query(Stats).filter(Stats.id == id).first()
-    stats.victories, stats.wins_now = data[0], data[1]
-    stats.total, stats.friendly_victories = data[2], data[3]
-    db_sess.commit()
-    db_sess.close()
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''UPDATE statistics
+SET victories = "{data[0]}", wins_now = "{data[1]}", total = "{data[2]}", friendly_victories = "{data[3]}"
+WHERE id = {id};'''
+    cursor.execute(query)
+    connection.commit()
+    connection.close()
 
 
 def get_from_stat(id):
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''SELECT * FROM statistics
+WHERE id = {id}'''
+    cursor.execute(query)
+    return cursor.fetchall()[0]
 
-    db_sess = db_session.create_session()
-    stats = db_sess.query(Stats).filter(Stats.id == id).first()
-    db_sess.close()
-    answer = stats.id, stats.victories, stats.wins_now
-    answer += stats.total, stats.friendly_victories
-    return answer
+
+def check_stat(id):
+    connection = sqlite3.connect('database.db')
+    cursor = connection.cursor()
+    query = f'''SELECT total FROM statistics
+    WHERE id = {id}'''
+    cursor.execute(query)
+    if cursor.fetchall():
+        return True
+    return False
