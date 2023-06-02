@@ -8,7 +8,7 @@ WordWeights = dict[str, float]
 LetterProbs = dict[str, float]
 
 
-def get_letter_prob(word2weight: WordWeights,
+def get_letter_prob(word2weight: WordWeights, # Считает проценты без буквы
                     letter: str,
                     ) -> float:
     total_weight = sum(word2weight.values())
@@ -20,7 +20,7 @@ def get_letter_prob(word2weight: WordWeights,
     return letter_weight / total_weight
 
 
-def remove_containing_letter(word2weight: WordWeights,
+def remove_containing_letter(word2weight: WordWeights, # Убирает слова с учетом буквы
                              letter: str,
                              ) -> WordWeights:
     return {
@@ -30,7 +30,7 @@ def remove_containing_letter(word2weight: WordWeights,
     }
 
 
-def get_all_letter_positions(word: str, letter: str) -> tuple[int, ...]:
+def get_all_letter_positions(word: str, letter: str) -> tuple[int]: # Получить кортеж позиций буквы в слове
     return tuple(
         idx
         for idx, ch in enumerate(word)
@@ -38,7 +38,7 @@ def get_all_letter_positions(word: str, letter: str) -> tuple[int, ...]:
     )
 
 
-def filter_vocabulary_by_mask(word2weight: WordWeights,
+def filter_vocabulary_by_mask(word2weight: WordWeights, # Загаданное слово и названия буква -> Новый словарь
                               answer: str,
                               letter: str,
                               ) -> WordWeights:
@@ -50,7 +50,7 @@ def filter_vocabulary_by_mask(word2weight: WordWeights,
     }
 
 
-def make_move(word2weight: WordWeights,
+def make_move(word2weight: WordWeights, # Сократить словарь с учетом новой буквы
               answer: str,
               picked_letter: str) -> WordWeights:
     if picked_letter in answer:
@@ -74,7 +74,7 @@ def analyze_move(word2weight: WordWeights,
 def analyze_game(answer: str,
                  picked_letters: Iterable[str],
                  ) -> list[LetterProbs]:
-    with open('words.json', encoding='UTF-8') as cat_file:
+    with open('words.json') as cat_file:
         f = cat_file.read()
     data = json.loads(f)
     word2weight = {}
@@ -101,7 +101,7 @@ def analyze_game(answer: str,
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, player='BOT'):
         self.word = ' '
         self.meaning = ' '
         self.live = 6
@@ -109,6 +109,7 @@ class Game:
         self.all_letters = ' '
         self.buttons_line = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧЩШЬЫЪЭЮЯ'
         self.use_clue = '111'
+        self.player = player
 
     def encode(self):
         string = ''
@@ -117,29 +118,19 @@ class Game:
         string2 = ''
         for elem in self.all_letters:
             string2 += elem
-        mas = [
-            self.word,
-            self.meaning,
-            str(self.live),
-            string, string2,
-            self.use_clue
-        ]
-        return '---'.join(mas)
+        return '---'.join([self.word, self.meaning, str(self.live), string, string2, self.use_clue, self.player])
 
     def decode(self, string):
-        data = string.split('---')
-        self.word, self.meaning, self.live = data[0], data[1], data[2]
-        self.guessed_letters, self.all_letters = data[3], data[4]
-        self.use_clue = data[5]
+        self.word, self.meaning, self.live, self.guessed_letters, self.all_letters, self.use_clue, self.player = string.split('---')
         self.live = int(self.live)
 
     def get_string(self):
         answer = ''
         for elem in self.word:
             if elem in self.guessed_letters:
-                answer += elem
+                answer += elem.upper() + ' '
             else:
-                answer += '-'
+                answer += '— '
         return answer
 
     def get_buttons_line(self):
@@ -153,7 +144,7 @@ class Game:
 
     def generate_word(self, name=None):
         if name and random.randint(1, 10) == 2:
-            with open(name, 'r', encoding='UTF-8') as f:
+            with open(name, 'r') as f:
                 dictionary = {}
                 for elem in f.read().split('\n'):
                     word, znach = elem.split(':')
@@ -161,7 +152,7 @@ class Game:
                 self.word = random.choice(list(dictionary))
                 self.meaning = dictionary[self.word]
         else:
-            with open('words.json', encoding='UTF-8') as cat_file:
+            with open('words.json') as cat_file:
                 f = cat_file.read()
                 data = json.loads(f)
                 key = random.choice(list(data.items()))
@@ -173,7 +164,6 @@ class Game:
                     self.generate_word()
                 else:
                     self.word += elem
-            self.word = key[0]
             self.meaning = key[1]['definition']
         self.guessed_letters += self.word[0]
         self.buttons_line = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧЩШЬЫЪЭЮЯ'
@@ -209,3 +199,4 @@ class Game:
 
 if __name__ == '__main__':
     pprint.pprint(analyze_game('акр', 'иапк'))
+
